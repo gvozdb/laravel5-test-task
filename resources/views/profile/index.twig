@@ -1,0 +1,321 @@
+{% extends "layout.twig" %}
+
+{% block title %}Профиль {{ auth_user()['name'] }}{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <div class="panel panel-default">
+                    <div class="panel-heading">Profile</div>
+                        <div class="panel-body">
+
+                            {% include 'partials/msg.twig' with {'type': 'success', 'msg': session_get('msg.ok')} %}
+
+                            <form class="form-horizontal" role="form" method="POST" action="{{ url('/profile/update') }}">
+                                {{ csrf_field() }}
+
+                                <div class="form-group{{ errors.has('name') ? ' has-error' : '' }}">
+                                    <label class="col-md-4 control-label">Name</label>
+
+                                    <div class="col-md-6">
+                                        <input type="text" class="form-control" name="name" value="{{ old('name') ?: auth_user()['name'] }}">
+
+                                        {% if (errors.has('name')) %}
+                                            <span class="help-block">
+                                                <strong>{{ errors.first('name') }}</strong>
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="form-group{{ errors.has('skype') ? ' has-error' : '' }}">
+                                    <label class="col-md-4 control-label">Skype</label>
+
+                                    <div class="col-md-6">
+                                        <input type="text" class="form-control" name="skype" value="{{ old('skype') ?: auth_user()['skype'] }}">
+
+                                        {% if (errors.has('skype')) %}
+                                            <span class="help-block">
+                                                <strong>{{ errors.first('skype') }}</strong>
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="form-group{{ errors.has('phone') ? ' has-error' : '' }}">
+                                    <label class="col-md-4 control-label">Phone</label>
+
+                                    <div class="col-md-6">
+                                        <input type="text" class="form-control" name="phone" id="phone" value="{{ old('phone') ?: '7' }}" placeholder="+7(___)___-__-__">
+
+                                        {% if errors.has('phone') %}
+                                            <span class="help-block">
+                                                <strong>{{ errors.first('phone') }}</strong>
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <div class="col-md-6 col-md-offset-4">
+
+                                        {% if phones is iterable %}
+
+                                            {% macro phone_item(obj) %}
+                                                <li class="list-group-item">
+                                                    <div class="row">
+                                                        <div class="col-xs-8">
+                                                            <div>{{ obj.phone }}</div>
+                                                            {% if obj.confirmed == 1 %}
+                                                                <span class="label label-success">Number confirmed</span>
+                                                            {% else %}
+                                                                <a href="#confirmModal" class="confirm-modal btn btn-warning btn-xs" data-id="{{ obj.id }}" data-phone="{{ obj.phone }}" data-toggle="modal" data-target="#confirmModal">Confirm number</a>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="col-xs-4">
+                                                            <a href="{{ url('profile/phoneDelete', [obj.id]) }}" class="btn btn-danger btn-sm" onclick="return confirm('Realy?!');">
+                                                                <i class="fa fa-btn fa-remove"></i> Remove
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            {% endmacro %}
+
+                                            <ul class="list-group" style="margin-bottom:0;">
+                                                {% for phone in phones if phone.confirmed == 1 %}
+                                                    {{ _self.phone_item(phone) }}
+                                                {% endfor %}
+                                                {% for phone in phones if phone.confirmed == 0 %}
+                                                    {{ _self.phone_item(phone) }}
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <div class="col-md-6 col-md-offset-4">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fa fa-btn fa-floppy-o"></i>Save
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+
+{% block javascripts %}
+    {{ parent() }}
+
+    <div class="modal fade" id="confirmModal" tabindex="-1" role="dialog" aria-labelledby="confirmModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+
+                <form class="form-horizontal" role="form" method="POST" action="{{ url('/profile/phoneConfirm') }}">
+                    <input type="hidden" id="confirmModalPhoneID" name="id" value="0">
+                    {{ csrf_field() }}
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="confirmModalLabel">Confirmation phone number <span class="label_phone"></span></h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label">Confirmation code</label>
+
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" id="confirmModalPhoneCode" name="code" value="" placeholder="Enter code from SMS">
+
+                                <span class="help-block">
+                                    <strong></strong>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer text-right">
+                        <span class="time_left"></span>
+                        <button type="button" id="resendCode" class="btn btn-default" disabled="TRUE">
+                            <i class="fa fa-btn fa-repeat"></i> Resend
+                        </button>
+                        <button type="submit" id="submitCode" class="btn btn-primary">
+                            <i class="fa fa-btn fa-check"></i> Save
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+    <script>
+        (function()
+        {
+            var comfirmPhone = {
+                'link': '.confirm-modal',
+                'modal': '#confirmModal',
+                'label_phone': '#confirmModal .label_phone',
+                'form': '#confirmModal form',
+                'id': '#confirmModal input[name=id]',
+                'code': '#confirmModal input[name=code]',
+                'code_div': '#confirmModal .form-group',
+                'code_error': '#confirmModal .help-block',
+                'timer': '#confirmModal .time_left',
+                'resend': '#confirmModal #resendCode',
+                'submit': '#confirmModal #submitCode',
+            };
+
+            // Сброс предыдущего номера с модального окна
+            confirmFormReset = function()
+            {
+                clearInterval(window.timer);
+                $(comfirmPhone.id).val(0);
+                $(comfirmPhone.code).val('');
+                $(comfirmPhone.code_div).removeClass('has-error');
+                $(comfirmPhone.code_div).removeClass('has-success');
+                $(comfirmPhone.code_error).html('');
+                $(comfirmPhone.label_phone).text('');
+                $(comfirmPhone.timer).text('');
+                $(comfirmPhone.form).css({'opacity': '1'});
+                $(comfirmPhone.resend).attr('disabled', true);
+                $(comfirmPhone.submit).attr('disabled', false);
+            };
+
+            setTimer = function(timestamp)
+            {
+                window.timer = setInterval(function()
+                {
+                    if (timestamp > 0) {
+                        timestamp -= 1;
+                        $(comfirmPhone.timer).text(App.utils.timer(timestamp));
+                        $(comfirmPhone.resend).attr('disabled', true);
+                    }
+                    else {
+                        clearInterval(window.timer);
+                        $(comfirmPhone.timer).text('');
+                        $(comfirmPhone.resend).attr('disabled', false);
+                    }
+                }, 1000);
+            }
+
+            // Клик по ссылке на модалку
+            $(comfirmPhone.link).on('click', function(e)
+            {
+                var id = $(this).data('id');
+                var phone = $(this).data('phone');
+
+                $(comfirmPhone.id).val(id);
+                $(comfirmPhone.label_phone).text(phone);
+
+                $.ajax({
+                    type: "GET",
+                    url: "{{ url('/profile/phoneConfirm') }}/"+ id,
+                    dataType: "JSON",
+                    error: function(xhr) {
+                        console.log('Ошибка!', xhr);
+                    },
+                    success: function(res) {
+                        setTimer(res.timestamp);
+                    }
+                });
+            });
+
+            // Отправка формы с кодом подтверждения
+            $(comfirmPhone.form).on('submit', function(e)
+            {
+                e.preventDefault();
+
+                var id = $(comfirmPhone.label_phone).val();
+
+                $(comfirmPhone.form).css({'opacity': '.4'});
+                $(comfirmPhone.submit).attr('disabled', true);
+
+                $.ajax({
+                    type: "POST",
+                    url: "{{ url('/profile/phoneConfirm') }}",
+                    data: $(comfirmPhone.form).serialize(),
+                    dataType: "JSON",
+                    error: function(xhr) {
+                        console.log('Ошибка!', xhr);
+                    },
+                    success: function(res)
+                    {
+                        $(comfirmPhone.form).css({'opacity': '1'});
+                        $(comfirmPhone.submit).attr('disabled', false);
+
+                        if (!res.success) {
+                            $(comfirmPhone.code_div).removeClass('has-success');
+                            $(comfirmPhone.code_div).addClass('has-error');
+                            $(comfirmPhone.code_error).html(res.msg);
+                        }
+                        else {
+                            $(comfirmPhone.code_div).removeClass('has-error');
+                            $(comfirmPhone.code_div).addClass('has-success');
+
+                            location.reload();
+                        }
+                    }
+                });
+            });
+
+            // Переотправляем СМС с кодом
+            $(comfirmPhone.resend).on('click', function(e)
+            {
+                var id = $(comfirmPhone.id).val();
+
+                $(comfirmPhone.resend).attr('disabled', true);
+
+                $.ajax({
+                    type: "GET",
+                    url: "{{ url('/profile/phoneConfirmSend') }}/"+ id,
+                    dataType: "JSON",
+                    error: function(xhr) {
+                        console.log('Ошибка!', xhr);
+                    },
+                    success: function(res) {
+                        console.log(res)
+
+                        setTimer(res.timestamp);
+                    }
+                });
+            });
+
+            // При закрытии модального окна сбрасываем форму до первоначального состояния
+            $(comfirmPhone.modal).on('hide.bs.modal', function(e)
+            {
+                confirmFormReset();
+            })
+        })(jQuery);
+    </script>
+
+    <script>
+        var maskList = $.masksSort([{ "mask": "+7(###)###-##-##" }], ['#'], /[0-9]|#/, "mask");
+        var maskOpts = {
+            inputmask: {
+                definitions: {
+                    '#': {
+                        validator: "[0-9]",
+                        cardinality: 1
+                    }
+                },
+                //clearIncomplete: true,
+                showMaskOnHover: false,
+                autoUnmask: true
+            },
+            match: /[0-9]/,
+            replace: '#',
+            list: maskList,
+            listKey: "mask",
+        };
+
+        $('#phone').inputmasks(maskOpts);
+    </script>
+{% endblock %}
